@@ -1,34 +1,57 @@
-import org.apache.commons.collections.MultiMap;
-import org.apache.commons.collections.map.MultiValueMap;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Request {
-    public static MultiMap getQueryParams (String url) {
-        MultiMap map = new MultiValueMap();
+
+    private final RequestLine requestLine;
+    private final Map<String,String> headers;
+    private final List<String> body;
+
+
+    public Request (List <String> strings) throws IOException {
+        requestLine = new RequestLine(strings.remove(0));
+        headers = strings.stream().takeWhile(string -> !string.equals("")).collect(Collectors.toMap(
+                string -> string.split(":")[0].trim(),
+                string -> string.split(":")[1].trim()
+                ));
+        body = strings.stream().dropWhile(string -> !string.equals("")).collect(Collectors.toList());
+}
+
+    public HashMap getQueryParams () throws URISyntaxException {
+        HashMap <String, String> map = new HashMap<>();
         List<NameValuePair> params;
-        try {
-            params = URLEncodedUtils.parse(new URI(url), "UTF-8");
+            params = URLEncodedUtils.parse(new URI(getRequestLine().getPath()), "UTF-8");
             for (NameValuePair param : params) {
                 if (param.getName() != null && param.getValue() != null)
                     map.put(param.getName(), param.getValue());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         return map;
     }
 
-    public static String getQueryParamsPath(String url) {
-        String result;
-        int i = url.indexOf("?");
-        if (i == -1) {
-            return url;
-        }
-        result = url.substring(0, i);
-        return result;
+
+    public String getQueryParam (String name) throws URISyntaxException  {
+        HashMap <String, String> map = getQueryParams();
+        return map.get(name);
+    }
+
+
+    public RequestLine getRequestLine() {
+        return requestLine;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public List<String> getBody() {
+        return body;
     }
 }
